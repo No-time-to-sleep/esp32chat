@@ -1,0 +1,430 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>LC Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font:13px/1.5 monospace;padding:12px}
+h2{color:#58a6ff;margin:0 0 8px}h3{margin:12px 0 6px;color:#58a6ff}
+input,select,textarea,button{padding:6px 10px;border-radius:4px;border:1px solid #30363d;background:#161b22;color:#e6edf3;font:13px monospace;margin:2px}
+button{cursor:pointer;border:none}button:hover{opacity:.85}
+.btn-danger{background:#da3633;color:#fff}.btn-outline{background:#30363d}.btn-green{background:#238636}.btn-warn{background:#d29922;color:#000}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:16px 0 8px}
+.tab{padding:8px 16px;background:#161b22;border:1px solid #30363d;border-radius:6px 6px 0 0;cursor:pointer;color:#8b949e}
+.tab.active,.tab:hover{background:#238636;color:#fff;border-color:#238636}
+.panel{display:none}.panel.active{display:block}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+td,th{padding:6px 8px;border-bottom:1px solid #30363d;text-align:left}
+th{color:#8b949e;font-weight:normal}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:12px}
+#msg{color:#58a6ff;margin:8px 0;font-size:12px;min-height:18px}
+#login{margin-bottom:12px}
+.stat{text-align:center;padding:8px 12px}.stat .n{font-size:22px;font-weight:700}.stat .l{font-size:11px;color:#8b949e}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+</style></head><body>
+<h2>LC Admin Panel</h2>
+<div id="js-status" style="background:#d29922;color:#000;padding:4px 8px;font-size:11px;margin-bottom:8px">JS checking...</div>
+<button onclick="alert('ONCLICK WORKS')" style="background:#d29922;margin-bottom:8px">TEST: onclick alert</button>
+<div id="login"><form onsubmit="doLogin();return false" style="display:inline"><input id="l" placeholder="admin login" size="12" autocomplete="username"><input id="p" type="password" placeholder="admin password" size="12" autocomplete="current-password"><button type="submit" class="btn-green">Login</button></form><span id="loginMsg" style="color:#58a6ff;margin-left:8px;font-size:12px"></span></div>
+<div id="main" style="display:none"><div id="msg"></div>
+<button onclick="alert('STATIC BUTTON WORKS')" style="background:#d29922;margin:8px">STATIC TEST: onclick alert</button>
+<div class="tabs"><div class="tab active" onclick="switchTab('users')">Users</div><div class="tab" onclick="switchTab('cleanup')">Cleanup</div><div class="tab" onclick="switchTab('system')">System</div><div class="tab" onclick="switchTab('passwords')">Passwords</div><div class="tab" onclick="switchTab('support')">Support</div><div class="tab" onclick="switchTab('mode')">Mode</div><div class="tab" onclick="switchTab('activity')">Activity</div><div class="tab" onclick="switchTab('network')">Network</div><div class="tab" onclick="switchTab('reports')">Reports</div>
+  <div class="tab" onclick="switchTab('profile')">Profile</div></div>
+<div id="panel-users" class="panel active"></div><div id="panel-cleanup" class="panel"></div><div id="panel-system" class="panel"></div><div id="panel-passwords" class="panel"></div><div id="panel-support" class="panel"></div><div id="panel-mode" class="panel"></div><div id="panel-activity" class="panel"></div><div id="panel-network" class="panel"></div><div id="panel-reports" class="panel"></div>
+<div id="panel-profile" class="panel"></div></div>
+<script>
+var ST = "";
+var _el = document.getElementById("js-status");
+if (_el) _el.innerHTML = '<span style="color:#238636">JS loaded</span>';
+window.onerror = function(m,u,l) {
+  var el = document.getElementById("js-status");
+  if (el) el.innerHTML = '<span style="color:#f85149">JS ERROR line '+l+': '+m+'</span>';
+};
+
+
+function msg(t) { var m = document.getElementById("msg"); m.innerHTML = t || ""; setTimeout(function() { m.innerHTML = ""; }, 5000); }
+function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+
+async function doLogin() {
+  var m = document.getElementById("loginMsg"); m.textContent = "...";
+  var login = document.getElementById("l").value.trim();
+  var pass = document.getElementById("p").value.trim();
+  if (!login || !pass) { m.textContent = "Enter login and password"; return; }
+  try {
+    var r = await fetch("/auth/login", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({login:login,password:pass,client_kind:"web"})});
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.detail ? d.detail.message : "HTTP " + r.status);
+    if (d.user.role !== "admin" && d.user.role !== "moderator") { m.textContent = "Admin access only"; return; }
+    ST = d.session.token;
+    localStorage.setItem("lc_session_token", ST);
+    localStorage.setItem("lc_user", JSON.stringify(d.user));
+    m.textContent = "OK"; m.style.color = "#238636";
+    showMain();
+  } catch(e) { m.textContent = e.message; }
+}
+
+function showMain() {
+  document.getElementById("login").innerHTML = '<span style="color:#238636">Logged in as <b>' + JSON.parse(localStorage.getItem("lc_user") || "{}").login + '</b></span> <button class="btn-outline" onclick="ST=\'\';localStorage.clear();location.reload()">Logout</button>';
+  document.getElementById("main").style.display = "block";
+  loadUsers();
+}
+
+function switchTab(t) {
+  document.querySelectorAll(".tab").forEach(function(x) { x.classList.remove("active"); });
+  document.querySelector(".tab[onclick*='" + t + "']").classList.add("active");
+  document.querySelectorAll(".panel").forEach(function(x) { x.classList.remove("active"); });
+  document.getElementById("panel-" + t).classList.add("active");
+  if (t === "users") loadUsers();
+  if (t === "support") loadSupport();
+  if (t === "system") loadSystem();
+  if (t === "passwords") loadPasswords();
+  if (t === "mode") loadMode();
+  if (t === "activity") loadActivity();
+  if (t === "network") loadNetwork();
+  if (t === "reports") loadReports();
+}
+
+async function apiCall(url, method, body) {
+  var opts = { method: method || "GET", headers: { "Content-Type": "application/json" } };
+  if (body) opts.body = JSON.stringify(body);
+  var r = await fetch(url, opts);
+  var d = await r.json();
+  if (!r.ok) throw new Error(d.detail ? d.detail.message : "HTTP " + r.status);
+  return d;
+}
+
+// USERS
+async function loadUsers() {
+  var p = document.getElementById("panel-users");
+  p.innerHTML = '<div class="card">Loading...</div>';
+  try {
+    var d = await apiCall("/admin/users?session_token=" + ST + "&_=" + Date.now());
+    var h = '<div class="card"><h3>Users (' + d.count + ')</h3><table><tr><th>ID</th><th>Login</th><th>Role</th><th>Status</th><th>Actions</th></tr>';
+    d.items.forEach(function(u) {
+      h += "<tr><td>" + u.user_id + "</td><td>" + esc(u.login) + "</td><td>" + u.role + "</td><td>" + u.status + "</td><td>";
+      if (u.status === "active") {
+        h += '<button class="btn-outline" onclick="userAction(' + u.user_id + ',\'setrole\',\'' + (u.role === "moderator" ? "user" : "moderator") + '\')">' + (u.role === "moderator" ? "Demote" : "Promote") + '</button> ';
+        h += '<button class="btn-danger" onclick="userAction(' + u.user_id + ',\'ban\')">Ban</button> ';
+        h += '<input id="tbdur' + u.user_id + '" type="number" value="60" min="1" max="10080" size="4" style="width:55px"> ';
+        h += '<button class="btn-outline" onclick="tblk(' + u.user_id + ')">min</button> ';
+        h += '<button class="btn-danger" onclick="delUser(' + u.user_id + ',\'' + esc(u.login) + '\')">Delete</button>';
+      } else {
+        h += '<button class="btn-green" onclick="userAction(' + u.user_id + ',\'unban\')">Unban</button>';
+      }
+      h += "</td></tr>";
+    });
+    h += "</table></div>";
+    p.innerHTML = h;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+}
+
+async function userAction(uid, action, role) {
+  msg("Working...");
+  try {
+    var body = { session_token: ST };
+    if (role) body.role = role;
+    await apiCall("/admin/users/" + uid + "/" + (action === "setrole" ? "set-role" : action), "POST", body);
+    msg('<span style="color:#238636">' + action + " OK</span>");
+    loadUsers();
+  } catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+async function tblk(uid) {
+  var dur = parseInt(document.getElementById("tbdur" + uid).value || 60);
+  if (isNaN(dur) || dur < 1 || dur > 10080) { msg("1-10080 min"); return; }
+  msg("Blocking...");
+  try {
+    await apiCall("/admin/users/" + uid + "/temporary-block", "POST", { session_token: ST, duration_minutes: dur });
+    msg('<span style="color:#238636">Blocked ' + dur + "min</span>");
+    loadUsers();
+  } catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+async function delUser(uid, login) {
+  msg("Deleting...");
+  try {
+    await apiCall("/admin/users/" + uid + "?session_token=" + ST, "DELETE");
+    msg('<span style="color:#238636">Deleted ' + login + "</span>");
+    loadUsers();
+  } catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+// CLEANUP
+(function() {
+  var html = '<div class="card"><h3>Cleanup</h3><div class="row">';
+  var actions = [
+    ["Clear Global Chat", "clear-global", "btn-outline"],
+    ["Clear Blog", "clear-blog", "btn-outline"],
+    ["Clear Support", "clear-support", "btn-outline"],
+    ["Delete All Chats", "delete-chats", "btn-danger"],
+    ["Delete All Users", "delete-users", "btn-danger"],
+    ["FULL RESET", "full-reset", "btn-warn"]
+  ];
+  actions.forEach(function(a) {
+    html += '<button class="' + a[2] + '" onclick="cleanupAction(\'' + a[1] + '\')">' + a[0] + "</button> ";
+  });
+  html += "</div></div>";
+  document.getElementById("panel-cleanup").innerHTML = html;
+})();
+
+async function cleanupAction(action) {
+  var map = {
+    "clear-global": ["/chat/api/admin/clear-global", "POST"],
+    "clear-blog": ["/chat/api/admin/clear-blog", "POST"],
+    "clear-support": ["/chat/api/admin/clear-support", "POST"],
+    "delete-chats": ["/chat/api/admin/delete-all-chats", "POST"],
+    "delete-users": ["/chat/api/admin/delete-all-users", "POST"],
+    "full-reset": ["/chat/api/admin/full-reset", "POST"]
+  };
+  var a = map[action];
+  if (!a) return;
+  msg("Working...");
+  try {
+    var body = action === "full-reset" ? { session_token: ST, confirm: true } : { session_token: ST };
+    var r = await apiCall(a[0], a[1], body);
+    msg('<span style="color:#238636">OK: ' + (r.deleted_count != null ? r.deleted_count + " items" : "done") + "</span>");
+  } catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+// SYSTEM
+async function loadSystem() {
+  var p = document.getElementById("panel-system");
+  p.innerHTML = '<div class="card">Loading...</div>';
+  try {
+    var h = await apiCall("/ops/api/system-health?session_token=" + ST);
+    var s = await apiCall("/ops/api/services?session_token=" + ST);
+    var html = '<div class="card"><h3>RPi System</h3><div class="row">';
+    html += '<div class="stat"><div class="n" style="color:#238636">' + (h.health.cpu_temp || "?") + '</div><div class="l">CPU</div></div>';
+    html += '<div class="stat"><div class="n">' + h.health.ram_used + '</div><div class="l">RAM / ' + h.health.ram_total + "</div></div>";
+    html += '<div class="stat"><div class="n">' + h.health.disk_used + '</div><div class="l">Disk ' + h.health.disk_pct + "</div></div>";
+    html += '</div><h3>Services</h3><table><tr><th>Service</th><th>State</th><th>Action</th></tr>';
+    s.services.forEach(function(svc) {
+      var c = svc.active === "active" ? "#238636" : "#f85149";
+      html += '<tr><td>' + svc.name + '</td><td style="color:' + c + '">' + svc.active + '</td><td><button class="btn-outline" onclick="sysRestart(\'' + svc.name + '\')">Restart</button></td></tr>';
+    });
+    html += '</table><button class="btn-warn" onclick="sysRestart(\'reboot\')">Reboot RPi</button> <span id="sysMsg" style="font-size:12px"></span></div>';
+    p.innerHTML = html;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+}
+
+async function sysRestart(svc) {
+  var m = document.getElementById("sysMsg"); if (m) m.textContent = "Restarting " + svc + "...";
+  if (svc === "reboot") { if (m) m.textContent = "Rebooting..."; }
+  try {
+    await apiCall("/ops/api/restart-service", "POST", { session_token: ST, service: svc });
+    if (m) { m.innerHTML = '<span style="color:#238636">OK</span>'; setTimeout(function() { m.textContent = ""; }, 3000); }
+  } catch(e) { if (m) m.innerHTML = '<span style="color:#f85149">' + e.message + "</span>"; }
+}
+
+// PASSWORDS
+async function loadPasswords() {
+  var p = document.getElementById("panel-passwords");
+  p.innerHTML = '<div class="card">Loading...</div>';
+  try {
+    var d = await apiCall("/admin/users?session_token=" + ST + "&limit=200");
+    var h = '<div class="card"><h3>Password Reset</h3><table><tr><th>Login</th><th>Role</th><th>New Password</th><th></th></tr>';
+    d.items.forEach(function(u) {
+      h += '<tr><td>' + esc(u.login) + '</td><td>' + u.role + '</td><td><input id="pw' + u.user_id + '" placeholder="min 8 chars" size="16"></td>';
+      h += '<td><button class="btn-outline" onclick="pwReset(' + u.user_id + ')">Reset</button> <span id="pm' + u.user_id + '" style="font-size:11px"></span></td></tr>';
+    });
+    h += "</table></div>";
+    p.innerHTML = h;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+}
+
+async function pwReset(uid) {
+  var inp = document.getElementById("pw" + uid);
+  var m = document.getElementById("pm" + uid);
+  var pw = inp.value.trim();
+  if (pw.length < 8) { m.textContent = "Min 8 chars"; return; }
+  try {
+    await apiCall("/admin/users/" + uid + "/reset-password", "POST", { session_token: ST, new_password: pw });
+    m.textContent = "OK"; m.style.color = "#238636";
+  } catch(e) { m.textContent = e.message; m.style.color = "#f85149"; }
+}
+
+// SUPPORT
+async function loadSupport() {
+  var p = document.getElementById("panel-support");
+  p.innerHTML = '<div class="card">Loading...</div>';
+  try {
+    var d = await apiCall("/admin/content/support/tickets?session_token=" + ST);
+    var h = '<div class="card"><h3>Support Tickets (' + d.count + ')</h3>';
+    if (!d.items || !d.items.length) { h += '<p style="color:#8b949e">No tickets</p>'; }
+    d.items.forEach(function(t) {
+      h += '<div class="card"><strong>#' + t.ticket_id + " " + esc(t.title) + '</strong> <span style="color:#8b949e">' + t.status + "</span><br>";
+      h += '<span style="font-size:11px;color:#8b949e">User #' + t.user_id + "</span>";
+      h += '<div style="margin-top:6px"><select id="sts' + t.ticket_id + '"><option value="open" ' + (t.status === "open" ? "selected" : "") + '>open</option><option value="in_progress" ' + (t.status === "in_progress" ? "selected" : "") + '>in progress</option><option value="resolved" ' + (t.status === "resolved" ? "selected" : "") + '>resolved</option><option value="closed" ' + (t.status === "closed" ? "selected" : "") + '>closed</option></select> ';
+      h += '<button class="btn-outline" onclick="suppStatus(' + t.ticket_id + ')">Update</button>';
+      h += '<textarea id="sti' + t.ticket_id + '" placeholder="Reply..." rows="2" style="width:100%;margin-top:4px"></textarea>';
+      h += '<button class="btn-green" onclick="suppReply(' + t.ticket_id + ')">Send Reply</button></div></div>';
+    });
+    h += "</div>";
+    p.innerHTML = h;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+}
+
+async function suppStatus(tid) {
+  var sel = document.getElementById("sts" + tid); if (!sel) return;
+  try { await apiCall("/admin/content/support/tickets/" + tid + "/status", "POST", { session_token: ST, status: sel.value }); msg('<span style="color:#238636">Status: ' + sel.value + "</span>"); }
+  catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+async function suppReply(tid) {
+  var inp = document.getElementById("sti" + tid);
+  if (!inp || !inp.value.trim()) { msg("Reply cannot be empty"); return; }
+  try {
+    await apiCall("/admin/content/support/tickets/" + tid + "/reply", "POST", { session_token: ST, body_text: inp.value.trim() });
+    inp.value = ""; msg('<span style="color:#238636">Reply sent</span>');
+  } catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+// MODE
+async function loadMode() {
+  var p = document.getElementById("panel-mode");
+  try {
+    var d = await apiCall("/admin/mode/state?session_token=" + ST);
+    var newMode = d.access_mode === "open" ? "closed" : "open";
+    p.innerHTML = '<div class="card"><h3>Access Mode: <span style="color:' + (d.access_mode === "open" ? "#238636" : "#d29922") + '">' + d.access_mode + '</span></h3><button class="' + (d.access_mode === "open" ? "btn-danger" : "btn-green") + '" onclick="toggleMode(\'' + newMode + '\')">Switch to ' + newMode + "</button></div>";
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+}
+
+async function toggleMode(m) {
+  try { await apiCall("/admin/mode/set", "POST", { session_token: ST, access_mode: m, hold_seconds: 5 }); msg('<span style="color:#238636">Mode: ' + m + "</span>"); loadMode(); }
+  catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+// ACTIVITY
+async function loadActivity() {
+  var p = document.getElementById("panel-activity");
+  try {
+    var r = await apiCall("/chat/api/admin/activity?session_token=" + ST + "&limit=50");
+    var on = { count: 0 };
+    try { on = await apiCall("/realtime/online", "POST", { session_token: ST }); } catch(e) {}
+    var h = '<div class="card"><h3>Activity</h3><div class="row">';
+    h += '<div class="stat"><div class="n" style="color:#238636">' + r.stats.messages_30d + '</div><div class="l">Messages (30d)</div></div>';
+    h += '<div class="stat"><div class="n" style="color:#58a6ff">' + r.stats.users_30d + '</div><div class="l">New users (30d)</div></div>';
+    h += '<div class="stat"><div class="n" style="color:#58a6ff">' + (on.count || 0) + '</div><div class="l">Online now</div></div>';
+    h += '<div class="stat"><div class="n">' + r.stats.total_events + '</div><div class="l">Total events</div></div>';
+    h += '</div><h3>Recent Activity</h3><table><tr><th>Event</th><th>User</th><th>Time</th></tr>';
+    (r.items || []).forEach(function(e) { h += '<tr><td>' + esc(e.event) + '</td><td>' + esc(e.user_login || "") + '</td><td style="font-size:11px">' + new Date(e.time).toLocaleString() + "</td></tr>"; });
+    h += "</table></div>";
+    p.innerHTML = h;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+}
+
+// NETWORK
+async function loadNetwork() {
+  var p = document.getElementById("panel-network");
+  p.innerHTML = '<div class="card">Loading...</div>';
+  try {
+    var ifaces = await apiCall("/admin/network/interfaces?session_token=" + ST);
+    var users = await apiCall("/admin/network/users?session_token=" + ST);
+    var h = '<div class="card"><h3>Network Interfaces</h3><table><tr><th>Name</th><th>Role</th><th>IP</th></tr>';
+    ifaces.items.forEach(function(i) { h += '<tr><td>' + i.ifname + '</td><td>' + i.role + '</td><td>' + (i.ip_address || "-") + "</td></tr>"; });
+    h += '</table></div><div class="card"><h3>Internet Access</h3><table><tr><th>User ID</th><th>Login</th><th>Internet</th><th>Toggle</th></tr>';
+    users.items.forEach(function(u) {
+      h += '<tr><td>' + u.user_id + '</td><td>' + esc(u.login) + '</td><td style="color:' + (u.internet_enabled ? "#238636" : "#f85149") + '">' + (u.internet_enabled ? "ON" : "OFF") + "</td>";
+      h += '<td><button class="' + (u.internet_enabled ? "btn-danger" : "btn-green") + '" onclick="toggleInternet(' + u.user_id + "," + (!u.internet_enabled) + ')">' + (u.internet_enabled ? "Disable" : "Enable") + "</button></td></tr>";
+    });
+    h += "</table></div>";
+    p.innerHTML = h;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+}
+
+async function toggleInternet(uid, enable) {
+  try { await apiCall("/admin/network/users/internet", "POST", { session_token: ST, user_id: uid, enabled: enable }); msg('<span style="color:#238636">Internet ' + (enable ? "enabled" : "disabled") + "</span>"); loadNetwork(); }
+  catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+// REPORTS
+async function loadReports() {
+  var p = document.getElementById("panel-reports");
+  p.innerHTML = '<div class="card">Loading...</div>';
+  try {
+    var d = await fetch("http://" + location.hostname + ":18081/reports?token=" + ST).then(function(r) { return r.json(); });
+    var h = '<div class="card"><h3>Moderation Reports <span style="color:#f85149">(' + d.pending_count + ' pending)</span></h3>';
+    if (!d.reports || !d.reports.length) { h += '<p style="color:#8b949e">No reports</p>'; }
+    d.reports.forEach(function(r) {
+      var sc = r.status === "pending" ? "#d29922" : "#8b949e";
+      h += '<div class="card" style="border-left:3px solid ' + sc + '"><div style="display:flex;justify-content:space-between"><strong>' + esc(r.user_login) + '</strong><span style="font-size:11px;color:#8b949e">#' + r.id + " " + r.status + "</span></div>";
+      h += '<div style="font-size:12px;color:#8b949e;margin:4px 0">Words: <span style="color:#f85149">' + esc(r.found_words || "") + "</span></div>";
+      h += '<div style="font-size:12px;background:#0d1117;padding:6px;border-radius:4px;margin:4px 0;max-height:60px;overflow-y:auto">' + esc(r.message_text || "") + "</div>";
+      if (r.status === "pending") {
+        h += '<div style="margin-top:6px"><button class="btn-danger" onclick="resolveReport(' + r.id + ',\'ban\')">Ban</button> <button class="btn-warn" onclick="resolveReport(' + r.id + ',\'warn\')">Warn</button> <button class="btn-outline" onclick="resolveReport(' + r.id + ',\'dismiss\')">Dismiss</button></div>';
+      } else {
+        h += '<div style="font-size:11px;color:#8b949e">Resolved: ' + esc(r.action || "?") + " by " + esc(r.resolved_by || "?") + "</div>";
+      }
+      h += "</div>";
+    });
+    h += "</div>";
+    p.innerHTML = h;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + (e.message || "Moderation API offline") + "</div>"; }
+}
+
+async function resolveReport(rid, action) {
+  msg("Working...");
+  try {
+    await fetch("http://" + location.hostname + ":18081/reports/resolve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: ST, report_id: rid, action: action }) });
+    msg('<span style="color:#238636">Report ' + action + "</span>");
+    loadReports();
+  } catch(e) { msg('<span style="color:#f85149">' + e.message + "</span>"); }
+}
+
+// Global click handler — catches ALL admin button clicks
+// Global click handler — parses onclick-style data-click attributes
+
+
+
+async function loadProfile() {
+  var p = document.getElementById('panel-profile');
+  p.innerHTML = '<div class="card">Loading...</div>';
+  try {
+    // Свой профиль
+    var d = await apiCall('/account/api/profile?session_token=' + ST);
+    var pr = d.profile;
+    var emojis = ['🐱','🐶','🐼','🦊','🐸','🐵','🦁','🐮','🐷','🐭','🐹','🐰','🐻','🐨','🐯'];
+    var emoji = emojis[(pr.user_id||0) % emojis.length];
+    var h = '<div class="card" style="max-width:500px">';
+    h += '<div style="text-align:center;font-size:48px;margin-bottom:8px">' + emoji + '</div>';
+    h += '<h3 style="text-align:center">' + esc(pr.display_name || pr.login) + '</h3>';
+    h += '<div style="text-align:center;color:#8b949e;margin-bottom:12px">@' + esc(pr.login) + ' · ' + pr.role + '</div>';
+    h += '<table><tr><th>Display Name</th><td>' + esc(pr.display_name || '-') + '</td></tr>';
+    h += '<tr><th>Role</th><td>' + pr.role + '</td></tr>';
+    h += '<tr><th>Status</th><td>' + pr.status + '</td></tr>';
+    if (pr.phone) h += '<tr><th>Phone</th><td>' + esc(pr.phone) + '</td></tr>';
+    h += '</table>';
+    if (pr.profile_bio) h += '<div class="card" style="margin-top:8px"><h4>Bio</h4><p style="white-space:pre-wrap">' + esc(pr.profile_bio) + '</p></div>';
+    h += '</div>';
+    
+    // Поиск другого пользователя
+    h += '<div class="card" style="max-width:500px;margin-top:12px"><h3>Lookup User</h3>';
+    h += '<input id="lookup-login" placeholder="User login" size="20" style="margin-right:4px">';
+    h += '<button class="btn-outline" onclick="lookupProfile()">View</button>';
+    h += '<div id="lookup-result" style="margin-top:8px"></div></div>';
+    
+    p.innerHTML = h;
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + '</div>'; }
+}
+
+async function lookupProfile() {
+  var login = document.getElementById('lookup-login').value.trim();
+  if (!login) { document.getElementById('lookup-result').textContent = 'Enter a login'; return; }
+  document.getElementById('lookup-result').innerHTML = 'Searching...';
+  try {
+    // Сначала найти user_id по логину через admin/users
+    var users = await apiCall('/admin/users?session_token=' + ST + '&limit=200');
+    var found = users.items.find(function(u) { return u.login.toLowerCase() === login.toLowerCase(); });
+    if (!found) { document.getElementById('lookup-result').innerHTML = '<span style="color:#f85149">User not found</span>'; return; }
+    var uid = found.user_id;
+    var d = await apiCall('/account/api/profile/' + uid + '?session_token=' + ST);
+    var pr = d.profile;
+    var emojis = ['🐱','🐶','🐼','🦊','🐸','🐵','🦁','🐮','🐷','🐭','🐹','🐰','🐻','🐨','🐯'];
+    var emoji = emojis[(pr.user_id||0) % emojis.length];
+    var h = '<div style="text-align:center;font-size:36px;margin-bottom:4px">' + emoji + '</div>';
+    h += '<h3 style="text-align:center">' + esc(pr.display_name || pr.login) + '</h3>';
+    h += '<div style="text-align:center;color:#8b949e;margin-bottom:8px">@' + esc(pr.login) + ' · ' + pr.role + ' · ' + pr.status + '</div>';
+    if (pr.phone) h += '<div><b>Phone:</b> ' + esc(pr.phone) + '</div>';
+    if (pr.profile_bio) h += '<div style="margin-top:4px"><b>Bio:</b><br>' + esc(pr.profile_bio).replace(/\\n/g,'<br>') + '</div>';
+    document.getElementById('lookup-result').innerHTML = '<div class="card" style="margin-top:8px">' + h + '</div>';
+  } catch(e) { document.getElementById('lookup-result').innerHTML = '<span style="color:#f85149">' + e.message + '</span>'; }
+}
+
+</script></body></html>

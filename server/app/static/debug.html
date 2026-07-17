@@ -1,0 +1,66 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>LC Debug</title>
+<style>body{font:14px monospace;background:#0d1117;color:#e6edf3;padding:20px}
+.btn{padding:4px 10px;border-radius:4px;border:none;cursor:pointer;margin:2px;font:12px monospace}
+.ok{color:#238636}.err{color:#f85149}.info{color:#58a6ff}
+table{border-collapse:collapse;width:100%;margin:10px 0}
+td,th{padding:6px 8px;border:1px solid #30363d;text-align:left}</style></head><body>
+<h2>LC Debug Panel</h2>
+<div id="status" class="info">Initializing...</div>
+<div id="users"></div>
+<script>
+const BASE = '';
+const ST = localStorage.getItem('lc_session_token');
+document.getElementById('status').textContent = ST ? 'Token: ' + ST.substring(0,20) + '...' : 'NO TOKEN - pls login first at /';
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.detail?.message || d.detail?.code || 'HTTP '+r.status);
+  return d;
+}
+
+async function load() {
+  if (!ST) return;
+  try {
+    const d = await api('/admin/users?session_token=' + ST + '&_=' + Date.now());
+    var h = '<table><tr><th>ID</th><th>Login</th><th>Role</th><th>Status</th><th>Actions</th></tr>';
+    d.items.forEach(u => {
+      h += '<tr><td>'+u.user_id+'</td><td>'+u.login+'</td><td>'+u.role+'</td><td>'+u.status+'</td><td>';
+      h += '<button class=btn onclick="doAction('+u.user_id+',\'setrole\',\''+(u.role==='moderator'?'user':'moderator')+'\')">'+(u.role==='moderator'?'Demote':'Promote')+'</button>';
+      h += '<button class=btn onclick="doAction('+u.user_id+',\'ban\')">Ban</button>';
+      h += '<button class=btn onclick="doDelete('+u.user_id+',\''+u.login+'\')">Delete</button>';
+      h += '</td></tr>';
+    });
+    h += '</table>';
+    document.getElementById('users').innerHTML = h;
+    document.getElementById('status').innerHTML = '<span class=ok>OK: '+d.items.length+' users loaded</span>';
+  } catch(e) {
+    document.getElementById('status').innerHTML = '<span class=err>ERROR: '+e.message+'</span>';
+  }
+}
+
+async function doAction(uid, action, role) {
+  var el = document.getElementById('status');
+  el.textContent = 'Working...';
+  try {
+    var body = {session_token: ST};
+    if (role) body.role = role;
+    await api('/admin/users/'+uid+'/'+action, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    el.innerHTML = '<span class=ok>'+action+' OK</span>';
+    load();
+  } catch(e) { el.innerHTML = '<span class=err>'+action+' FAILED: '+e.message+'</span>'; }
+}
+
+async function doDelete(uid, login) {
+  if (!confirm('Delete '+login+'?')) return;
+  var el = document.getElementById('status');
+  el.textContent = 'Deleting...';
+  try {
+    await api('/admin/users/'+uid+'?session_token='+ST, {method:'DELETE'});
+    el.innerHTML = '<span class=ok>Deleted '+login+'</span>';
+    load();
+  } catch(e) { el.innerHTML = '<span class=err>Delete FAILED: '+e.message+'</span>'; }
+}
+
+load();
+</script></body></html>
