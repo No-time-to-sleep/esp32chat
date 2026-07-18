@@ -448,7 +448,7 @@ async function doLoadMessages() {
             <span class="msg-author">${isMe?esc(STATE.user?.login||'You'):(m.author_login||(isMe ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span>
             <span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span>
           </div>
-          <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:2px><button class=btn-sm style=font-size:10px;padding:2px 6px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:3px;cursor:pointer onclick="editMsg(\'+m.message_id+\',\'+esc(m.body_text)+\')">Edit</button> <button class=btn-sm style=font-size:10px;padding:2px 6px;background:transparent;color:var(--accent4);border:1px solid var(--border);border-radius:3px;cursor:pointer onclick="delMsg(\'+m.message_id+\')">Del</button></div>' : ''}
+          <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:4px><button class="btn btn-sm btn-outline" style=font-size:10px;padding:2px 8px onclick="editMsg(${m.message_id})">Edit</button> <button class="btn btn-sm btn-danger" style=font-size:10px;padding:2px 8px onclick="delMsg(${m.message_id})">Del</button></div>' : ''}
           ${renderAttachments(m.attachments)}
         </div>`;
       list.append(div);
@@ -814,7 +814,7 @@ async function loadTicketDetail(ticketId, title, itemEl) {
                   <span class="msg-author">${m.author_user_id===STATE.user?.id?esc(STATE.user?.login||'You'):(m.author_login||((m.author_user_id===STATE.user?.id) ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span>
                   <span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span>
                 </div>
-                <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:2px><button class=btn-sm style=font-size:10px;padding:2px 6px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:3px;cursor:pointer onclick="editMsg(\'+m.message_id+\',\'+esc(m.body_text)+\')">Edit</button> <button class=btn-sm style=font-size:10px;padding:2px 6px;background:transparent;color:var(--accent4);border:1px solid var(--border);border-radius:3px;cursor:pointer onclick="delMsg(\'+m.message_id+\')">Del</button></div>' : ''}
+                <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:4px><button class="btn btn-sm btn-outline" style=font-size:10px;padding:2px 8px onclick="editMsg(${m.message_id})">Edit</button> <button class="btn btn-sm btn-danger" style=font-size:10px;padding:2px 8px onclick="delMsg(${m.message_id})">Del</button></div>' : ''}
                 ${renderAttachments(m.attachments)}
               </div>
             </div>`).join('') : '<div style="color:var(--text2);text-align:center;padding:16px">No messages</div>'}
@@ -1052,7 +1052,7 @@ async function renderAdminSupport() {
                 <div class="msg-avatar" style="width:24px;height:24px;font-size:10px">${m.author_user_id===STATE.user?.id?'A':'U'}</div>
                 <div class="msg-body">
                   <div class="msg-header"><span class="msg-author">${m.author_user_id===STATE.user?.id?'Admin':(m.author_login||((m.author_user_id===STATE.user?.id) ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span><span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span></div>
-                  <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:2px><button class=btn-sm style=font-size:10px;padding:2px 6px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:3px;cursor:pointer onclick="editMsg(\'+m.message_id+\',\'+esc(m.body_text)+\')">Edit</button> <button class=btn-sm style=font-size:10px;padding:2px 6px;background:transparent;color:var(--accent4);border:1px solid var(--border);border-radius:3px;cursor:pointer onclick="delMsg(\'+m.message_id+\')">Del</button></div>' : ''}
+                  <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:4px><button class="btn btn-sm btn-outline" style=font-size:10px;padding:2px 8px onclick="editMsg(${m.message_id})">Edit</button> <button class="btn btn-sm btn-danger" style=font-size:10px;padding:2px 8px onclick="delMsg(${m.message_id})">Del</button></div>' : ''}
                   ${renderAttachments(m.attachments)}
                 </div>
               </div>`).join('') || '<div style="color:var(--text2);text-align:center">No messages</div>';
@@ -1520,8 +1520,8 @@ function showProfileModal(html) {
   if (!m) {
     m = document.createElement("div");
     m.id = "profile-modal";
-    m.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
-    m.onclick = function(e) { if (e.target === m) m.remove(); };
+    m.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s";
+    m.onclick = function(e) { if (e.target === m) { m.style.animation="fadeOut .15s"; setTimeout(function(){m.remove()},140); } };
     document.body.appendChild(m);
   }
   m.innerHTML = html;
