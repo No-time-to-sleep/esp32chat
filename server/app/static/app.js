@@ -774,6 +774,7 @@ async function renderSupport() {
   // always attach modal handlers regardless of API result
   $('#new-ticket-btn').onclick = () => show('#new-ticket-modal');
   $('#ticket-cancel').onclick = () => { hide('#new-ticket-modal'); $('#ticket-title').value=''; $('#ticket-body').value=''; if ($('#ticket-file')) $('#ticket-file').value=''; };
+  $('#ticket-kind').onchange = function() { document.getElementById('report-user-group').style.display = this.value === 'report' ? '' : 'none'; };
   $('#ticket-submit').onclick = async () => { 
     const title = $('#ticket-title').value.trim();
     const body = $('#ticket-body').value.trim();
@@ -782,7 +783,7 @@ async function renderSupport() {
     try {
       await api('/support/api/tickets', {
         method:'POST',
-        body:JSON.stringify({session_token:STATE.token, title, body_text:body, attachment_ids:[]})
+        body:JSON.stringify({session_token:STATE.token, title, body_text:body, kind: $('#ticket-kind').value, attachment_ids:[]})
       });
       toast('Ticket created', 'success');
       hide('#new-ticket-modal');
