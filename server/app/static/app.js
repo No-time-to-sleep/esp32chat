@@ -1515,6 +1515,17 @@ function t(key) { var e = T[key]; return e ? (e[LANG] || e["rus"] || key) : key;
 function toggleLang() { LANG = LANG === "rus" ? "eng" : "rus"; localStorage.setItem("lc_lang", LANG); location.reload(); }
 
 // Profile viewer — click avatar in chat
+function showProfileModal(html) {
+  var m = document.getElementById("profile-modal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "profile-modal";
+    m.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
+    m.onclick = function(e) { if (e.target === m) m.remove(); };
+    document.body.appendChild(m);
+  }
+  m.innerHTML = html;
+}
 async function viewUserProfile(uid) {
   if (uid === STATE.user?.id) { window.location.hash = "#/account"; return; }
   try {
@@ -1522,13 +1533,16 @@ async function viewUserProfile(uid) {
     var p = d.profile;
     var emojis = ["🐱","🐶","🐼","🦊","🐸","🐵","🦁","🐮","🐷","🐭","🐹","🐰","🐻","🐨","🐯"];
     var emoji = localStorage.getItem("lc_emoji_" + uid) || emojis[uid % emojis.length];
-    var h = "<div style=text-align:center;font-size:48px;margin-bottom:8px>" + emoji + "</div>";
-    h += "<h2 style=color:#58a6ff;text-align:center;margin:8px 0>" + esc(p.display_name || p.login) + "</h2>";
-    h += "<div style=text-align:center;color:#8b949e>@" + esc(p.login) + " · " + p.role + "</div>";
-    if (p.phone) h += "<div style=margin-top:4px>📞 " + esc(p.phone) + "</div>";
-    if (p.profile_bio) h += "<div style=margin-top:12px;white-space:pre-wrap;background:#0d1117;padding:8px;border-radius:4px>" + esc(p.profile_bio) + "</div>";
-    var w = window.open("", "_blank", "width=400,height=450");
-    if (w) { w.document.write("<html><head><title>" + esc(p.login) + "</title><style>body{background:#0d1117;color:#e6edf3;font:13px monospace;padding:20px;margin:0}h2{color:#58a6ff;margin:8px 0}</style></head><body><div style=background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;max-width:350px;margin:0 auto>" + h + "</div></body></html>"); w.document.close(); }
+    var h = "<div style=background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;max-width:340px;width:100%;position:relative>";
+    h += "<button onclick=document.getElementById(\"profile-modal\").remove() style=position:absolute;top:8px;right:8px;background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer>&times;</button>";
+    h += "<div style=text-align:center;font-size:48px;margin-bottom:8px>" + emoji + "</div>";
+    h += "<h2 style=color:#58a6ff;text-align:center;margin:8px 0;font-size:18px>" + esc(p.display_name || p.login) + "</h2>";
+    h += "<div style=text-align:center;color:#8b949e;font-size:13px>@" + esc(p.login) + "</div>";
+    h += "<div style=text-align:center;color:#8b949e;font-size:12px;margin-bottom:12px>" + p.role + "</div>";
+    if (p.phone) h += "<div style=margin:6px 0;font-size:13px>📞 " + esc(p.phone) + "</div>";
+    if (p.profile_bio) h += "<div style=margin-top:8px;font-size:13px;white-space:pre-wrap;background:#0d1117;padding:10px;border-radius:6px;line-height:1.4>" + esc(p.profile_bio) + "</div>";
+    h += "</div>";
+    showProfileModal(h);
   } catch(e) { toast(e.message, "error"); }
 }
 

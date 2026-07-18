@@ -199,3 +199,47 @@ a:hover{text-decoration:underline}
   .send-area textarea{flex:1 1 100%}
   .send-area .btn{flex:1;justify-content:center}
 }
+
+/* ===== MOBILE LAYOUT ===== */
+@media (max-width: 768px) {
+  .nav-links { flex-wrap: wrap; gap: 2px; }
+  .nav-links a { font-size: 11px; padding: 6px 10px; }
+  .nav-brand { font-size: 14px; padding: 6px 10px; }
+  
+  /* Чат — мобильная структура */
+  .grid-2 { display: flex; flex-direction: column; }
+  #chat-list { width: 100%; max-height: none; }
+  #chat-messages { width: 100%; }
+  
+  /* Сообщения */
+  .msg { padding: 6px 4px; }
+  .msg-avatar { width: 32px; height: 32px; font-size: 14px; }
+  .msg-text { font-size: 14px; line-height: 1.4; }
+  .msg-header { font-size: 11px; }
+  
+  /* Кнопки */
+  .btn { font-size: 12px; padding: 6px 12px; }
+  .btn-sm { font-size: 11px; padding: 4px 8px; }
+  
+  /* Формы */
+  .login-card { padding: 20px; margin: 10px; }
+  .card { padding: 10px; margin-bottom: 8px; }
+  
+  /* Модалки */
+  .modal { width: 95%; max-width: none; padding: 16px; }
+  
+  /* Отправка сообщений */
+  .send-area { padding: 6px; }
+  .send-area textarea { font-size: 15px; }
+  
+  /* Табы админки */
+  .tabs { gap: 2px; }
+  .tab { font-size: 11px; padding: 6px 10px; }
+  
+  /* Таблицы */
+  table { font-size: 11px; }
+  td, th { padding: 4px 6px; }
+  
+  /* Профиль */
+  #profile-modal > div { margin: 8px; max-height: 90vh; overflow-y: auto; }
+}
