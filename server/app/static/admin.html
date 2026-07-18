@@ -404,7 +404,7 @@ async function loadProfile() {
   } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + '</div>'; }
 }
 
-async function lookupProfile() {
+async function _removed_lookupProfile() {
   var login = document.getElementById('lookup-login').value.trim();
   if (!login) { document.getElementById('lookup-result').textContent = 'Enter a login'; return; }
   document.getElementById('lookup-result').innerHTML = 'Searching...';

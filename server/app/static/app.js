@@ -442,7 +442,7 @@ async function doLoadMessages() {
       var emojis = ['🐱','🐶','🐼','🦊','🐸','🐵','🦁','🐮','🐷','🐭','🐹','🐰','🐻','🐨','🐯','🐙','🦄','🐳','🐧','🐤']; var uemoji = emojis[(m.author_user_id||0) % emojis.length]; var initial = isMe ? (STATE.user?.display_name||STATE.user?.login||'👤').charAt(0) : uemoji;
       const div = el('div',{class:'msg',style:{flexDirection:isMe?'row-reverse':undefined}});
       div.innerHTML = `
-        <div class="msg-avatar" style="${isMe?'background:var(--accent2)':''}">${esc(initial)}</div>
+        <div class="msg-avatar" style="cursor:pointer;${isMe?'background:var(--accent2)':''}" onclick="viewUserProfile(${m.author_user_id})" title="View profile">${esc(initial)}</div>
         <div class="msg-body" style="text-align:${isMe?'right':'left'}">
           <div class="msg-header" style="justify-content:${isMe?'flex-end':'flex-start'}">
             <span class="msg-author">${isMe?esc(STATE.user?.login||'You'):(m.author_login||(isMe ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span>
@@ -590,7 +590,7 @@ async function renderAccount() {
     $('#account-card').innerHTML = `
       <div class="card">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
-          <div class="account-avatar">${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="avatar">` : esc((p.display_name||p.login).charAt(0).toUpperCase())}</div>
+          <div class="account-avatar">${(localStorage.getItem('lc_my_emoji') || '🐱')}</div>
           <div>
             <div style="font-size:18px;font-weight:600">${esc(p.display_name||p.login)}</div>
             <div style="font-size:13px;color:var(--text2)">@${esc(p.login)} · <span class="badge badge-${p.role}">${p.role}</span></div>
@@ -811,7 +811,7 @@ async function loadTicketDetail(ticketId, title, itemEl) {
               <div class="msg-avatar" style="width:28px;height:28px;font-size:11px">${m.author_user_id===STATE.user?.id?'Y':'U'}</div>
               <div class="msg-body">
                 <div class="msg-header">
-                  <span class="msg-author">${m.author_user_id===STATE.user?.id?esc(STATE.user?.login||'You'):(m.author_login||(isMe ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span>
+                  <span class="msg-author">${m.author_user_id===STATE.user?.id?esc(STATE.user?.login||'You'):(m.author_login||((m.author_user_id===STATE.user?.id) ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span>
                   <span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span>
                 </div>
                 <div class="msg-text">${esc(m.body_text || '')}</div>
@@ -1051,7 +1051,7 @@ async function renderAdminSupport() {
               <div class="msg" style="margin-bottom:6px">
                 <div class="msg-avatar" style="width:24px;height:24px;font-size:10px">${m.author_user_id===STATE.user?.id?'A':'U'}</div>
                 <div class="msg-body">
-                  <div class="msg-header"><span class="msg-author">${m.author_user_id===STATE.user?.id?'Admin':(m.author_login||(isMe ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span><span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span></div>
+                  <div class="msg-header"><span class="msg-author">${m.author_user_id===STATE.user?.id?'Admin':(m.author_login||((m.author_user_id===STATE.user?.id) ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span><span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span></div>
                   <div class="msg-text">${esc(m.body_text || '')}</div>
                   ${renderAttachments(m.attachments)}
                 </div>
@@ -1457,6 +1457,15 @@ setTimeout(function() { if (typeof handleRoute === "function") handleRoute(); },
 
 // ===== TRANSLATION SYSTEM =====
 var LANG = localStorage.getItem("lc_lang") || "rus";
+// Language toggle — fixed position
+document.addEventListener("DOMContentLoaded", function() {
+  var d = document.createElement("div");
+  d.id = "lang-switch";
+  d.style.cssText = "position:fixed;top:8px;right:8px;z-index:99999";
+  d.innerHTML = "<button onclick=\"toggleLang()\" style=\"background:#30363d;color:#e6edf3;border:1px solid #30363d;padding:6px 10px;border-radius:4px;cursor:pointer;font:12px monospace\">" + (LANG === "rus" ? "🇬🇧 ENG" : "🇷🇺 RUS") + "</button>";
+  document.body.appendChild(d);
+});
+
 var T = {
 "sign_in":{rus:"Войти",eng:"Sign In"},"create_account":{rus:"Создать аккаунт",eng:"Create Account"},
 "enter_login_pass":{rus:"Введите логин и пароль",eng:"Enter login and password"},
@@ -1504,3 +1513,27 @@ var T = {
 };
 function t(key) { var e = T[key]; return e ? (e[LANG] || e["rus"] || key) : key; }
 function toggleLang() { LANG = LANG === "rus" ? "eng" : "rus"; localStorage.setItem("lc_lang", LANG); location.reload(); }
+
+// Profile viewer — click avatar in chat
+async function viewUserProfile(uid) {
+  if (uid === STATE.user?.id) { window.location.hash = "#/account"; return; }
+  try {
+    var d = await api("/account/api/profile/" + uid + "?session_token=" + encodeURIComponent(STATE.token));
+    var p = d.profile;
+    var emojis = ["🐱","🐶","🐼","🦊","🐸","🐵","🦁","🐮","🐷","🐭","🐹","🐰","🐻","🐨","🐯"];
+    var emoji = localStorage.getItem("lc_emoji_" + uid) || emojis[uid % emojis.length];
+    var h = "<div style=text-align:center;font-size:48px;margin-bottom:8px>" + emoji + "</div>";
+    h += "<h2 style=color:#58a6ff;text-align:center;margin:8px 0>" + esc(p.display_name || p.login) + "</h2>";
+    h += "<div style=text-align:center;color:#8b949e>@" + esc(p.login) + " · " + p.role + "</div>";
+    if (p.phone) h += "<div style=margin-top:4px>📞 " + esc(p.phone) + "</div>";
+    if (p.profile_bio) h += "<div style=margin-top:12px;white-space:pre-wrap;background:#0d1117;padding:8px;border-radius:4px>" + esc(p.profile_bio) + "</div>";
+    var w = window.open("", "_blank", "width=400,height=450");
+    if (w) { w.document.write("<html><head><title>" + esc(p.login) + "</title><style>body{background:#0d1117;color:#e6edf3;font:13px monospace;padding:20px;margin:0}h2{color:#58a6ff;margin:8px 0}</style></head><body><div style=background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;max-width:350px;margin:0 auto>" + h + "</div></body></html>"); w.document.close(); }
+  } catch(e) { toast(e.message, "error"); }
+}
+
+// Обновить кнопку языка при загрузке
+setTimeout(function() {
+  var lb = document.getElementById("lang-btn");
+  if (lb) lb.textContent = LANG === "rus" ? "🇬🇧 ENG" : "🇷🇺 RUS";
+}, 200);
