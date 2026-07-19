@@ -1557,3 +1557,29 @@ setTimeout(function() {
   var lb = document.getElementById("lang-btn");
   if (lb) lb.textContent = LANG === "rus" ? "🇬🇧 ENG" : "🇷🇺 RUS";
 }, 200);
+
+// Edit/Delete messages
+async function editMsg(mid) {
+  var oldText = prompt("Edit message:", "");
+  if (!oldText) return;
+  try {
+    await api("/chat/api/chats/" + currentChatId + "/messages/" + mid, {method:"PUT", body:JSON.stringify({session_token:STATE.token, body_text:oldText})});
+    doLoadMessages();
+  } catch(e) { toast(e.message, "error"); }
+}
+
+function confirmDel(mid) {
+  var overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center";
+  overlay.innerHTML = "<div style=background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;max-width:320px;text-align:center><div style=font-size:40px;margin-bottom:8px>🗑️</div><h3 style=color:#e6edf3;margin:0 0 16px>Delete this message?</h3><div style=display:flex;gap:8px;justify-content:center><button id=cfm-yes style=background:#da3633;color:#fff;border:none;padding:8px 24px;border-radius:6px;cursor:pointer;font:14px monospace>Yes, delete</button><button id=cfm-no style=background:#30363d;color:#e6edf3;border:none;padding:8px 24px;border-radius:6px;cursor:pointer;font:14px monospace>No, keep it</button></div></div>";
+  document.body.appendChild(overlay);
+  document.getElementById("cfm-yes").onclick = function() { overlay.remove(); delMsg(mid); };
+  document.getElementById("cfm-no").onclick = function() { overlay.remove(); };
+}
+
+async function delMsg(mid) {
+  try {
+    await api("/chat/api/chats/" + currentChatId + "/messages/" + mid, {method:"DELETE", body:JSON.stringify({session_token:STATE.token})});
+    doLoadMessages();
+  } catch(e) { toast(e.message, "error"); }
+}
