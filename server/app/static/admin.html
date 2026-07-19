@@ -317,16 +317,93 @@ async function loadNetwork() {
   try {
     var ifaces = await apiCall("/admin/network/interfaces?session_token=" + ST);
     var users = await apiCall("/admin/network/users?session_token=" + ST);
-    var h = '<div class="card"><h3>Network Interfaces</h3><table><tr><th>Name</th><th>Role</th><th>IP</th></tr>';
-    ifaces.items.forEach(function(i) { h += '<tr><td>' + i.ifname + '</td><td>' + i.role + '</td><td>' + (i.ip_address || "-") + "</td></tr>"; });
-    h += '</table></div><div class="card"><h3>Internet Access</h3><table><tr><th>User ID</th><th>Login</th><th>Internet</th><th>Toggle</th></tr>';
-    users.items.forEach(function(u) {
-      h += '<tr><td>' + u.user_id + '</td><td>' + esc(u.login) + '</td><td style="color:' + (u.internet_enabled ? "#238636" : "#f85149") + '">' + (u.internet_enabled ? "ON" : "OFF") + "</td>";
-      h += '<td><button class="' + (u.internet_enabled ? "btn-danger" : "btn-green") + '" onclick="toggleInternet(' + u.user_id + "," + (!u.internet_enabled) + ')">' + (u.internet_enabled ? "Disable" : "Enable") + "</button></td></tr>";
+    
+    // WiFi client mode section
+    var h = '<div class="card"><h3>WiFi Client Mode (new)</h3>';
+    h += '<p style="color:#8b949e;font-size:12px;margin-bottom:8px">Connect RPi to existing WiFi. mDNS will make it available at <b>chat.local</b></p>';
+    h += '<div style="display:flex;gap:8px;margin-bottom:8px"><input id="wifi-ssid" placeholder="WiFi SSID" size="20"><input id="wifi-pass" type="password" placeholder="Password (leave empty for open)" size="20"><button class="btn-green" onclick="wifiConnect()">Connect</button></div>';
+    h += '<button class="btn-outline" onclick="wifiScan()">Scan Networks</button> <span id="wifi-scan-msg" style="font-size:11px;color:#8b949e"></span>';
+    h += '<div id="wifi-scan-results" style="margin-top:8px;max-height:120px;overflow-y:auto"></div>';
+    h += '<div style="margin-top:8px;font-size:12px;color:#8b949e">mDNS: <span id="mdns-status" style="color:#d29922">checking...</span></div>';
+    h += '</div>';
+    
+    // Interfaces
+    h += '<div class="card"><h3>Network Interfaces</h3><table><tr><th>Name</th><th>Role</th><th>IP</th><th>Mode</th></tr>';
+    ifaces.items.forEach(function(i) {
+      h += '<tr><td>' + i.ifname + '</td><td>' + i.role + '</td><td>' + (i.ip_address || "-") + '</td>';
+      h += '<td><select id="mode-' + i.ifname + '" style="padding:2px 6px;font-size:11px"><option value="ap">AP</option><option value="client">Client</option><option value="off">Off</option></select></td></tr>';
     });
-    h += "</table></div>";
+    h += '</table>';
+    h += '<button class="btn-warn" onclick="saveNetworkConfig()" style="margin-top:8px">💾 Save & Apply</button> <span id="net-save-msg" style="font-size:11px"></span>';
+    h += '</div>';
+    
+    // Internet access
+    h += '<div class="card"><h3>Internet Access</h3><table><tr><th>User</th><th>Internet</th><th>Toggle</th></tr>';
+    users.items.forEach(function(u) {
+      h += '<tr><td>' + esc(u.login) + '</td><td style="color:' + (u.internet_enabled ? "#238636" : "#f85149") + '">' + (u.internet_enabled ? "ON" : "OFF") + '</td>';
+      h += '<td><button class="' + (u.internet_enabled ? "btn-danger" : "btn-green") + '" onclick="toggleInternet(' + u.user_id + ',' + (!u.internet_enabled) + ')">' + (u.internet_enabled ? "Disable" : "Enable") + '</button></td></tr>';
+    });
+    h += '</table></div>';
+    
     p.innerHTML = h;
-  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + "</div>"; }
+    
+    // Check mDNS status
+    try {
+      fetch("http://chat.local:18080/health").then(function() {
+        document.getElementById("mdns-status").innerHTML = '<span style="color:#238636">active (chat.local)</span>';
+      }).catch(function() {
+        document.getElementById("mdns-status").innerHTML = '<span style="color:#8b949e">not active</span>';
+      });
+    } catch(e) {}
+  } catch(e) { p.innerHTML = '<div class="card" style="color:#f85149">' + e.message + '</div>'; }
+}
+
+// WiFi functions
+async function wifiScan() {
+  var msg = document.getElementById("wifi-scan-msg");
+  var results = document.getElementById("wifi-scan-results");
+  msg.textContent = "Scanning..."; results.innerHTML = "";
+  try {
+    var d = await apiCall("/admin/network/wifi/scan?session_token=" + ST);
+    if (d.networks && d.networks.length) {
+      var h = '<table><tr><th>SSID</th><th>Signal</th><th>Security</th></tr>';
+      d.networks.forEach(function(n) {
+        h += '<tr><td>' + esc(n.ssid) + '</td><td>' + (n.signal || "-") + '</td><td>' + (n.secure ? "🔒" : "🔓") + '</td></tr>';
+      });
+      h += '</table>';
+      results.innerHTML = h;
+    } else {
+      results.innerHTML = '<span style="color:#8b949e">No networks found</span>';
+    }
+    msg.textContent = "Done";
+  } catch(e) { msg.textContent = "Error: " + e.message; msg.style.color = "#f85149"; }
+}
+
+async function wifiConnect() {
+  var ssid = document.getElementById("wifi-ssid").value.trim();
+  var pass = document.getElementById("wifi-pass").value.trim();
+  if (!ssid) { msg("Enter SSID"); return; }
+  msg("Connecting to " + ssid + "...");
+  try {
+    await apiCall("/admin/network/wifi/connect", "POST", { session_token: ST, ssid: ssid, password: pass || "" });
+    msg('<span style="color:#238636">Connected to ' + ssid + '</span>');
+  } catch(e) { msg('<span style="color:#f85149">' + e.message + '</span>'); }
+}
+
+async function saveNetworkConfig() {
+  var m = document.getElementById("net-save-msg");
+  m.textContent = "Saving...";
+  // Collect mode changes
+  var config = {};
+  document.querySelectorAll("[id^='mode-']").forEach(function(sel) {
+    var iface = sel.id.replace("mode-", "");
+    config[iface] = sel.value;
+  });
+  try {
+    await apiCall("/admin/network/config/save", "POST", { session_token: ST, config: config });
+    m.innerHTML = '<span style="color:#238636">Saved! Restarting network...</span>';
+    setTimeout(function() { loadNetwork(); }, 3000);
+  } catch(e) { m.textContent = "Error: " + e.message; m.style.color = "#f85149"; }
 }
 
 async function toggleInternet(uid, enable) {
