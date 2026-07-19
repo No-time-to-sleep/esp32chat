@@ -425,10 +425,8 @@ async function doLoadMessages() {
   if (msgList2 && (msgList2.scrollHeight - msgList2.scrollTop - msgList2.clientHeight > 100)) return;
   try {
     const data = await api(`/chat/api/chats/${currentChatId}/messages?session_token=${encodeURIComponent(STATE.token)}&limit=50`);
-    const msgs = data.items || [];
-      const _isMe = function(m) { return m.author_user_id === STATE.user?.id; };
     // Save scroll state before re-render
-    var oldList = document.getElementById("msg-list");
+    const msgs = data.items || [];
     var wasAtBottom = !oldList || (oldList.scrollHeight - oldList.scrollTop - oldList.clientHeight < 50);
     var oldScrollTop = oldList ? oldList.scrollTop : 0;
     container.innerHTML = `
@@ -443,7 +441,7 @@ async function doLoadMessages() {
     const list = $('#msg-list');
     msgs.forEach(m => {
       const isMe = m.author_user_id === STATE.user?.id;
-      var emojis = ['🐱','🐶','🐼','🦊','🐸','🐵','🦁','🐮','🐷','🐭','🐹','🐰','🐻','🐨','🐯','🐙','🦄','🐳','🐧','🐤']; var uemoji = emojis[(m.author_user_id||0) % emojis.length]; var initial = isMe ? (STATE.user?.display_name||STATE.user?.login||'👤').charAt(0) : uemoji;
+      var emojis = ['🐱','🐶','🐼','🦊','🐸','🐵','🦁','🐮','🐷','🐭','🐹','🐰','🐻','🐨','🐯','🐙','🦄','🐳','🐧','🐤']; var uemoji = emojis[(m.author_user_id||0) % emojis.length]; var initial = (m.author_user_id===STATE.user?.id) ? (STATE.user?.display_name||STATE.user?.login||'👤').charAt(0) : uemoji;
       const div = el('div',{class:'msg',style:{flexDirection:isMe?'row-reverse':undefined}});
       div.innerHTML = `
         <div class="msg-avatar" style="cursor:pointer;${isMe?'background:var(--accent2)':''}" onclick="viewUserProfile(${m.author_user_id})" title="View profile">${esc(initial)}</div>
@@ -807,7 +805,6 @@ async function loadTicketDetail(ticketId, title, itemEl) {
   try {
     const data = await api(`/support/api/tickets/${ticketId}/messages?session_token=${encodeURIComponent(STATE.token)}`);
     const msgs = data.items || [];
-      const _isMe = function(m) { return m.author_user_id === STATE.user?.id; };
     container.innerHTML = `
       <div class="card" style="padding:16px">
         <div class="card-title" style="font-size:16px">${esc(title)}</div>
@@ -821,7 +818,7 @@ async function loadTicketDetail(ticketId, title, itemEl) {
                   <span class="msg-author">${m.author_user_id===STATE.user?.id?esc(STATE.user?.login||'You'):(m.author_login||((m.author_user_id===STATE.user?.id) ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span>
                   <span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span>
                 </div>
-                <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:4px;opacity:0.6><button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Edit" onclick="editMsg(${m.message_id})">✏️</button> <button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Delete" onclick="confirmDel(${m.message_id})">🗑️</button></div>' : ''}
+                <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${(m.author_user_id===STATE.user?.id) ? '<div class=msg-actions style=text-align:right;margin-top:4px;opacity:0.6><button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Edit" onclick="editMsg(${m.message_id})">✏️</button> <button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Delete" onclick="confirmDel(${m.message_id})">🗑️</button></div>' : ''}
                 ${renderAttachments(m.attachments)}
               </div>
             </div>`).join('') : '<div style="color:var(--text2);text-align:center;padding:16px">No messages</div>'}
@@ -1060,7 +1057,7 @@ async function renderAdminSupport() {
                 <div class="msg-avatar" style="width:24px;height:24px;font-size:10px">${m.author_user_id===STATE.user?.id?'A':'U'}</div>
                 <div class="msg-body">
                   <div class="msg-header"><span class="msg-author">${m.author_user_id===STATE.user?.id?'Admin':(m.author_login||((m.author_user_id===STATE.user?.id) ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span><span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span></div>
-                  <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:4px;opacity:0.6><button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Edit" onclick="editMsg(${m.message_id})">✏️</button> <button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Delete" onclick="confirmDel(${m.message_id})">🗑️</button></div>' : ''}
+                  <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${(m.author_user_id===STATE.user?.id) ? '<div class=msg-actions style=text-align:right;margin-top:4px;opacity:0.6><button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Edit" onclick="editMsg(${m.message_id})">✏️</button> <button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Delete" onclick="confirmDel(${m.message_id})">🗑️</button></div>' : ''}
                   ${renderAttachments(m.attachments)}
                 </div>
               </div>`).join('') || '<div style="color:var(--text2);text-align:center">No messages</div>';
