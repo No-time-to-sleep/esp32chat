@@ -423,6 +423,7 @@ async function doLoadMessages() {
   try {
     const data = await api(`/chat/api/chats/${currentChatId}/messages?session_token=${encodeURIComponent(STATE.token)}&limit=50`);
     const msgs = data.items || [];
+      const _isMe = function(m) { return m.author_user_id === STATE.user?.id; };
     // Save scroll state before re-render
     var oldList = document.getElementById("msg-list");
     var wasAtBottom = !oldList || (oldList.scrollHeight - oldList.scrollTop - oldList.clientHeight < 50);
@@ -753,7 +754,8 @@ async function renderSupport() {
     const list = $('#ticket-list');
     list.innerHTML = '';
     if (data.items?.length) {
-      data.items.forEach(t => {
+      const _admIsMe = function(m) { return m.author_user_id === STATE.user?.id; };
+    data.items.forEach(t => {
         const item = el('div',{class:'ticket-item'});
         item.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -802,6 +804,7 @@ async function loadTicketDetail(ticketId, title, itemEl) {
   try {
     const data = await api(`/support/api/tickets/${ticketId}/messages?session_token=${encodeURIComponent(STATE.token)}`);
     const msgs = data.items || [];
+      const _isMe = function(m) { return m.author_user_id === STATE.user?.id; };
     container.innerHTML = `
       <div class="card" style="padding:16px">
         <div class="card-title" style="font-size:16px">${esc(title)}</div>
@@ -1025,6 +1028,7 @@ async function renderAdminSupport() {
     const data = await api(`/admin/content/support/tickets?session_token=${encodeURIComponent(STATE.token)}`);
     container.innerHTML = `<div class="admin-card"><h3>Support Tickets (${data.count||0})</h3></div>`;
     if (!data.items?.length) { container.innerHTML += '<div class="empty"><div class="empty-text">No tickets</div></div>'; return; }
+    const _admIsMe = function(m) { return m.author_user_id === STATE.user?.id; };
     data.items.forEach(t => {
       const card = el('div',{class:'ticket-item',style:'margin-bottom:8px'});
       card.innerHTML = `
@@ -1513,7 +1517,7 @@ var T = {
 "lang_label":{rus:"🇷🇺 RUS",eng:"🇬🇧 ENG"},"enter_pass":{rus:"Введите пароль",eng:"Enter password"},
 };
 function t(key) { var e = T[key]; return e ? (e[LANG] || e["rus"] || key) : key; }
-function toggleLang() { LANG = LANG === "rus" ? "eng" : "rus"; localStorage.setItem("lc_lang", LANG); location.reload(); }
+function toggleLang() { var newLang = LANG === "rus" ? "eng" : "rus"; localStorage.setItem("lc_lang", newLang); location.reload(); }
 
 // Profile viewer — click avatar in chat
 function showProfileModal(html) {

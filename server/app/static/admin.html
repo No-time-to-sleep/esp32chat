@@ -364,7 +364,7 @@ async function wifiScan() {
   var results = document.getElementById("wifi-scan-results");
   msg.textContent = "Scanning..."; results.innerHTML = "";
   try {
-    var d = await apiCall("/admin/network/wifi/scan?session_token=" + ST);
+    var d = await apiCall("/admin/network/wifi/scan?session_token=" + ST + "&interface=wlan1");
     if (d.networks && d.networks.length) {
       var h = '<table><tr><th>SSID</th><th>Signal</th><th>Security</th></tr>';
       d.networks.forEach(function(n) {
@@ -385,8 +385,18 @@ async function wifiConnect() {
   if (!ssid) { msg("Enter SSID"); return; }
   msg("Connecting to " + ssid + "...");
   try {
-    await apiCall("/admin/network/wifi/connect", "POST", { session_token: ST, ssid: ssid, password: pass || "" });
-    msg('<span style="color:#238636">Connected to ' + ssid + '</span>');
+    await apiCall("/admin/network/wifi/connect", "POST", { session_token: ST, ssid: ssid, password: pass || "", interface: "wlan1" });
+    msg("Waiting for IP...");
+    // Check real status after 3+6+9 seconds
+    for (var i = 0; i < 3; i++) {
+      await new Promise(function(r) { setTimeout(r, 3000); });
+      var st = await apiCall("/admin/network/wifi/status?session_token=" + ST);
+      if (st.ip_address) {
+        msg('<span style="color:#238636">Connected! IP: ' + st.ip_address + '</span>');
+        return;
+      }
+    }
+    msg('<span style="color:#d29922">Not connected — no IP after 9s. Check password.</span>');
   } catch(e) { msg('<span style="color:#f85149">' + e.message + '</span>'); }
 }
 
