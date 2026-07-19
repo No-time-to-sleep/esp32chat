@@ -1,6 +1,6 @@
 const STATE = {
   token: localStorage.getItem('lc_session_token') || null,
-  user: JSON.parse(localStorage.getItem('lc_user') || 'null'),
+  user: (function(){ try { return JSON.parse(localStorage.getItem('lc_user') || 'null'); } catch(e) { return null; } })(),
   accessMode: null,
   chatCache: {},
   ticketCache: {},
