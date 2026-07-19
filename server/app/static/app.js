@@ -427,6 +427,7 @@ async function doLoadMessages() {
     const data = await api(`/chat/api/chats/${currentChatId}/messages?session_token=${encodeURIComponent(STATE.token)}&limit=50`);
     // Save scroll state before re-render
     const msgs = data.items || [];
+    var oldList = document.getElementById("msg-list");
     var wasAtBottom = !oldList || (oldList.scrollHeight - oldList.scrollTop - oldList.clientHeight < 50);
     var oldScrollTop = oldList ? oldList.scrollTop : 0;
     container.innerHTML = `
