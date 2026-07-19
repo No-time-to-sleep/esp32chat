@@ -221,6 +221,7 @@ async function renderLogin() {
     const login = $('#login-login').value.trim();
     const pass = $('#login-pass').value;
     if (!login || !pass) {show('#login-error');$('#login-error').textContent='Fill in all fields';return}
+  if (phone !== 'No Phone') { var cleanPhone = phone.replace(/[^0-9+]/g, ''); if (!/^\+?[0-9]{10,15}$/.test(cleanPhone)) { show('#login-error'); $('#login-error').textContent = 'Invalid phone. Use +79991234567'; return; } $('#login-phone').value = cleanPhone; }
     hide('#login-error');
     $('#login-btn').disabled = true; $('#login-btn').textContent = 'Signing in...';
     try {
@@ -232,10 +233,12 @@ async function renderLogin() {
   async function doRegister() {
     const login = $('#login-login').value.trim();
     const pass = $('#login-pass').value;
-    const phone = ($('#login-phone')?.value||'').trim() || '000';
+    const phone = ($('#login-phone')?.value||'').trim() || 'No Phone';
+  if (phone !== 'No Phone') { var cleanPhone = phone.replace(/[^0-9+]/g, ''); if (!/^\+?[0-9]{10,15}$/.test(cleanPhone)) { show('#login-error'); document.getElementById('login-error').textContent = 'Invalid phone. Use +79991234567'; return; } document.getElementById('login-phone').value = cleanPhone; }
     if (!login || !pass) {show('#login-error');$('#login-error').textContent='Fill in all fields';return}
-    if (pass.length < 8) {show('#login-error');$('#login-error').textContent='Password must be at least 8 characters';return}
-    hide('#login-error');
+  if (phone !== 'No Phone') { var cleanPhone = phone.replace(/[^0-9+]/g, ''); if (!/^\+?[0-9]{10,15}$/.test(cleanPhone)) { show('#login-error'); $('#login-error').textContent = 'Invalid phone. Use +79991234567'; return; } $('#login-phone').value = cleanPhone; }
+  if (phone !== "No Phone") { var cleanPhone = phone.replace(/[^0-9+]/g, ""); if (!/^\+?[0-9]{10,15}$/.test(cleanPhone)) { show("#login-error"); document.getElementById("login-error").textContent = "Invalid phone. Use +79991234567"; return; } document.getElementById("login-phone").value = cleanPhone; }
+  if (phone !== 'No Phone') { var cleanPhone = phone.replace(/[^0-9+]/g, ''); if (!/^\\+?[0-9]{10,15}$/.test(cleanPhone)) { show('#login-error'); document.getElementById('login-error').textContent = 'Invalid phone. Use +79991234567'; return; } document.getElementById('login-phone').value = cleanPhone; }
     $('#login-btn').disabled = true; $('#login-btn').textContent = 'Registering...';
     try {
       const data = await api('/auth/register', {method:'POST',body:JSON.stringify({login,password:pass,phone,device_id:'web-'+Date.now().toString(36),client_kind:'web'})});
@@ -446,7 +449,7 @@ async function doLoadMessages() {
         <div class="msg-avatar" style="cursor:pointer;${isMe?'background:var(--accent2)':''}" onclick="viewUserProfile(${m.author_user_id})" title="View profile">${esc(initial)}</div>
         <div class="msg-body" style="text-align:${isMe?'right':'left'}">
           <div class="msg-header" style="justify-content:${isMe?'flex-end':'flex-start'}">
-            <span class="msg-author">${isMe?esc(STATE.user?.login||'You'):(m.author_login||(isMe ? (STATE.user?.login||'You') : (userName(m.author_user_id))))}</span>
+            <span class="msg-author">${isMe?esc(STATE.user?.login||'You'):(m.author_login||userName(m.author_user_id))}</span>
             <span class="msg-time">${fmtTimeShort(m.created_at_ms)}</span>
           </div>
           <div class="msg-text">${esc(m.body_text || '')}${m.edited_at_ms ? ' <span style=font-size:10px;color:var(--text2)>(edited)</span>' : ''}</div>${isMe ? '<div class=msg-actions style=text-align:right;margin-top:4px;opacity:0.6><button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Edit" onclick="editMsg(${m.message_id})">✏️</button> <button class=btn-sm style=background:transparent;border:none;cursor:pointer;font-size:14px;padding:2px 6px title="Delete" onclick="confirmDel(${m.message_id})">🗑️</button></div>' : ''}
