@@ -1526,7 +1526,7 @@ function showProfileModal(html) {
   if (!m) {
     m = document.createElement("div");
     m.id = "profile-modal";
-    m.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s";
+    m.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
     m.onclick = function(e) { if (e.target === m) { m.style.animation="fadeOut .15s"; setTimeout(function(){m.remove()},140); } };
     document.body.appendChild(m);
   }
