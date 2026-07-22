@@ -8,8 +8,22 @@
 <link rel="stylesheet" href="/static/app.css?v=1784468559?v=1783514455">
 </head>
 <body>
+<div id="static-login" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0d1117;padding:20px">
+  <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:100%;max-width:380px">
+    <div style="color:#58a6ff;font:20px monospace;margin-bottom:4px">Local Chat</div>
+    <div style="color:#8b949e;font:13px monospace;margin-bottom:20px">Sign in</div>
+    <form onsubmit="doStaticLogin();return false">
+      <input id="sl" style="width:100%;background:#0d1117;color:#e6edf3;border:1px solid #30363d;padding:10px 12px;border-radius:6px;font:14px monospace;margin-bottom:10px" placeholder="Login" autocomplete="username">
+      <input id="sp" type="password" style="width:100%;background:#0d1117;color:#e6edf3;border:1px solid #30363d;padding:10px 12px;border-radius:6px;font:14px monospace;margin-bottom:10px" placeholder="Password" autocomplete="current-password">
+      <div id="serr" style="color:#f85149;font:12px monospace;margin-bottom:8px;display:none"></div>
+      <button type="submit" style="width:100%;background:#238636;color:#fff;border:none;padding:10px;border-radius:6px;font:14px monospace;cursor:pointer">Sign In</button>
+    </form>
+    <button onclick="doStaticGuest()" style="width:100%;background:#30363d;color:#e6edf3;border:none;padding:10px;border-radius:6px;font:14px monospace;cursor:pointer;margin-top:6px">Continue as guest</button>
+  </div>
+</div>
 
-<nav class="nav">
+
+<nav class="nav" style="display:none">
     <a href="#/chat" class="nav-brand">LC</a>
     <button class="hamburger" id="hamburger">☰</button>
     <div class="nav-links" id="nav-links">
@@ -42,5 +56,47 @@
 
 <script src="/static/app.js?v=1784493493"></script>
 
-<div id="lang-float" style="position:fixed;bottom:16px;right:16px;z-index:99999"><button onclick="toggleLang()" style="background:#30363d;color:#e6edf3;border:1px solid #30363d;padding:8px 12px;border-radius:6px;cursor:pointer;font:11px monospace">ENG</button></div></body>
+<div id="lang-float" style="position:fixed;bottom:16px;right:16px;z-index:99999"><button onclick="toggleLang()" style="background:#30363d;color:#e6edf3;border:1px solid #30363d;padding:8px 12px;border-radius:6px;cursor:pointer;font:11px monospace">ENG</button></div>
+<script>
+var _st = localStorage.getItem("lc_session_token");
+if (_st) {
+  document.getElementById("static-login").style.display = "none";
+  document.querySelector(".nav").style.display = "";
+  document.getElementById("nav-right").style.display = "";
+  try { var u = JSON.parse(localStorage.getItem("lc_user")||"{}"); document.getElementById("nav-user").textContent = u.login||""; } catch(e) {}
+}
+
+async function doStaticLogin() {
+  var l = document.getElementById("sl").value.trim();
+  var p = document.getElementById("sp").value.trim();
+  var e = document.getElementById("serr");
+  if (!l || !p) { e.textContent = "Enter login and password"; e.style.display = "block"; return; }
+  try {
+    var r = await fetch("/auth/login", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({login:l,password:p,client_kind:"web"})});
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.detail?.message||"HTTP "+r.status);
+    localStorage.setItem("lc_session_token", d.session.token);
+    localStorage.setItem("lc_user", JSON.stringify(d.user));
+    document.getElementById("static-login").style.display = "none";
+    document.querySelector(".nav").style.display = "";
+    document.getElementById("nav-user").textContent = d.user.login;
+    document.getElementById("nav-right").style.display = "";
+    var s = document.createElement("script"); s.src = "/static/app.js"; document.body.appendChild(s);
+  } catch(x) { e.textContent = x.message; e.style.display = "block"; }
+}
+
+async function doStaticGuest() {
+  try {
+    var r = await fetch("/auth/guest", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({client_kind:"web"})});
+    var d = await r.json();
+    localStorage.setItem("lc_session_token", d.session.token);
+    localStorage.setItem("lc_user", JSON.stringify(d.user));
+    document.getElementById("static-login").style.display = "none";
+    document.querySelector(".nav").style.display = "";
+    document.getElementById("nav-right").style.display = "";
+    var s = document.createElement("script"); s.src = "/static/app.js"; document.body.appendChild(s);
+  } catch(e) {}
+}
+</script>
+</body>
 </html>
