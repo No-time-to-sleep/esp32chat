@@ -42,7 +42,7 @@
   </div>
 </nav>
 
-<main class="main" id="content">
+<main class="main" id="content" style="display:none">
   <noscript>
     <div class="login-page">
       <div class="login-card">
@@ -60,7 +60,7 @@
 <script>
 var _st = localStorage.getItem("lc_session_token");
 if (_st) {
-  document.getElementById("static-login").style.display = "none";
+  document.getElementById("static-login").style.display = "none"; document.getElementById("content").style.display = "";
   document.querySelector(".nav").style.display = "";
   document.getElementById("nav-right").style.display = "";
   try { var u = JSON.parse(localStorage.getItem("lc_user")||"{}"); document.getElementById("nav-user").textContent = u.login||""; } catch(e) {}
@@ -77,7 +77,7 @@ async function doStaticLogin() {
     if (!r.ok) throw new Error(d.detail?.message||"HTTP "+r.status);
     localStorage.setItem("lc_session_token", d.session.token);
     localStorage.setItem("lc_user", JSON.stringify(d.user));
-    document.getElementById("static-login").style.display = "none";
+    document.getElementById("static-login").style.display = "none"; document.getElementById("content").style.display = "";
     document.querySelector(".nav").style.display = "";
     document.getElementById("nav-user").textContent = d.user.login;
     document.getElementById("nav-right").style.display = "";
@@ -91,7 +91,7 @@ async function doStaticGuest() {
     var d = await r.json();
     localStorage.setItem("lc_session_token", d.session.token);
     localStorage.setItem("lc_user", JSON.stringify(d.user));
-    document.getElementById("static-login").style.display = "none";
+    document.getElementById("static-login").style.display = "none"; document.getElementById("content").style.display = "";
     document.querySelector(".nav").style.display = "";
     document.getElementById("nav-right").style.display = "";
     var s = document.createElement("script"); s.src = "/static/app.js"; document.body.appendChild(s);
