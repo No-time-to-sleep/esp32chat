@@ -1463,14 +1463,6 @@ setTimeout(function() { if (typeof handleRoute === "function") handleRoute(); },
 
 // ===== TRANSLATION SYSTEM =====
 var LANG = localStorage.getItem("lc_lang") || "rus";
-// Language toggle — fixed position
-document.addEventListener("DOMContentLoaded", function() {
-  var d = document.createElement("div");
-  d.id = "lang-switch";
-  d.style.cssText = "position:fixed;top:8px;right:8px;z-index:99999";
-  d.innerHTML = "<button onclick=\"toggleLang()\" style=\"background:#30363d;color:#e6edf3;border:1px solid #30363d;padding:6px 10px;border-radius:4px;cursor:pointer;font:12px monospace\">" + (LANG === "rus" ? "🇬🇧 ENG" : "🇷🇺 RUS") + "</button>";
-  document.body.appendChild(d);
-});
 
 var T = {
 "sign_in":{rus:"Войти",eng:"Sign In"},"create_account":{rus:"Создать аккаунт",eng:"Create Account"},
@@ -1518,7 +1510,7 @@ var T = {
 "lang_label":{rus:"🇷🇺 RUS",eng:"🇬🇧 ENG"},"enter_pass":{rus:"Введите пароль",eng:"Enter password"},
 };
 function t(key) { var e = T[key]; return e ? (e[LANG] || e["rus"] || key) : key; }
-function toggleLang() { var newLang = LANG === "rus" ? "eng" : "rus"; localStorage.setItem("lc_lang", newLang); location.reload(); }
+
 
 // Profile viewer — click avatar in chat
 function showProfileModal(html) {
@@ -1554,7 +1546,6 @@ async function viewUserProfile(uid) {
 
 // Обновить кнопку языка при загрузке
 setTimeout(function() {
-  var lb = document.getElementById("lang-btn");
   if (lb) lb.textContent = LANG === "rus" ? "🇬🇧 ENG" : "🇷🇺 RUS";
 }, 200);
 
